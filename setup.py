@@ -1,28 +1,29 @@
 from setuptools import setup, find_packages
 
-# Read requirements from requirements.txt
-with open("requirements.txt", encoding="utf-8") as f:
-    requirements = [line.strip() for line in f if line.strip() and not line.startswith("#")]
-
 setup(
-    name="time-series-forecasting",
-    version="1.0.0",
-    description="End-to-end time series forecasting and deployment",
+    name="ml-timeseries",
+    version="0.1.0",
+    description="End-to-end time series forecasting framework",
     author="Anurag Pandey",
     author_email="anurag.pandey1292@gmail.com",
-    url="https://https://github.com/anuragpandey1292/time_series_model",
+    url="https://github.com/anuragpandey1292/time_series_model",
     license="MIT",
-    
-    # Package discovery
-    packages=find_packages(exclude=["tests", "*.tests", "*.tests.*", "tests.*"]),
-    
-    # Python version requirement
+
+    # IMPORTANT for src layout
+    package_dir={"": "src"},
+    packages=find_packages(where="src"),
+
     python_requires=">=3.8",
-    
-    # Core dependencies
-    install_requires=requirements,
-    
-    # Optional dependencies for different purposes
+
+    # KEEP THIS MINIMAL
+    install_requires=[
+        "numpy>=1.21.0",
+        "pandas>=1.3.0",
+        "scikit-learn>=1.0.0",
+        "statsmodels>=0.13.0",
+        "pyyaml>=6.0",
+    ],
+
     extras_require={
         "dev": [
             "pytest>=7.0",
@@ -32,29 +33,18 @@ setup(
             "isort>=5.0",
             "mypy>=0.950",
         ],
-        "deployment": [
-            "gunicorn>=20.1",
-            "flask>=2.0",
-            "docker>=5.0",
+        "api": [
+            "fastapi>=0.75.0",
+            "uvicorn>=0.17.0",
+            "gunicorn>=20.1.0",
+        ],
+        "dl": [
+            "tensorflow>=2.8.0",
+            "torch>=1.10.0",
+            "pytorch-lightning>=1.6.0",
         ],
     },
-    
-    # Entry points (if you have CLI commands or apps)
-    entry_points={
-        "console_scripts": [
-            "ts-train=time_series.cli:train",
-            "ts-predict=time_series.cli:predict",
-            "ts-serve=time_series.cli:serve",
-        ],
-    },
-    
-    # Project URLs
-    project_urls={
-        "Bug Reports": "https://github.com/anuragpandey1292/time_series_model/issues",
-        "Source": "https://github.com/anuragpandey1292/time_series_model",
-    },
-    
-    # Metadata
+
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
@@ -64,11 +54,9 @@ setup(
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
-        "Programming Language :: Python :: 3.11",
-        "Topic :: Scientific/Engineering",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
     ],
-    
+
     include_package_data=True,
     zip_safe=False,
 )
