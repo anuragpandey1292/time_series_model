@@ -1,95 +1,66 @@
-"""
-Industry-grade evaluation for time series forecasting
-Model-agnostic, leakage-safe, and production-ready
-"""
+# Evaluation/Evaluate.py
 
-from dataclasses import dataclass
-from typing import Dict, List
 import numpy as np
 import pandas as pd
-import logging
-
-logger = logging.getLogger(__name__)
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 
-# -------------------------------------------------
-# Configuration
-# -------------------------------------------------
-@dataclass
-class EvaluationConfig:
-    metrics: List[str] = ("mae", "rmse", "mape", "smape")
-    horizon: int = 1
-
-
-# -------------------------------------------------
-# Metric functions
-# -------------------------------------------------
-def mae(y_true, y_pred):
-    return np.mean(np.abs(y_true - y_pred))
-
+# ============================================================
+# METRICS
+# ============================================================
 
 def rmse(y_true, y_pred):
-    return np.sqrt(np.mean((y_true - y_pred) ** 2))
+    return np.sqrt(mean_squared_error(y_true, y_pred))
+
+
+def mae(y_true, y_pred):
+    return mean_absolute_error(y_true, y_pred)
 
 
 def mape(y_true, y_pred):
-    mask = y_true != 0
-    return np.mean(np.abs((y_true[mask] - y_pred[mask]) / y_true[mask])) * 100
+    y_true, y_pred = np.array(y_true), np.array(y_pred)
+    return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
 
 
-def smape(y_true, y_pred):
-    denom = (np.abs(y_true) + np.abs(y_pred)) / 2
-    mask = denom != 0
-    return np.mean(np.abs(y_true[mask] - y_pred[mask]) / denom[mask]) * 100
+# ============================================================
+# EVALUATE SINGLE MODEL
+# ============================================================
 
-
-METRIC_REGISTRY = {
-    "mae": mae,
-    "rmse": rmse,
-    "mape": mape,
-    "smape": smape,
-}
-
-
-# -------------------------------------------------
-# Core evaluation
-# -------------------------------------------------
-def evaluate_forecast(
-    y_true: pd.Series,
-    y_pred: pd.Series,
-    config: EvaluationConfig
-) -> Dict[str, float]:
-
-    logger.info("Starting evaluation")
-
-    # Align indices
-    y_true, y_pred = y_true.align(y_pred, join="inner")
-
-    metrics = {}
-    for name in config.metrics:
-        if name not in METRIC_REGISTRY:
-            raise ValueError(f"Unsupported metric: {name}")
-        metrics[name] = METRIC_REGISTRY[name](y_true.values, y_pred.values)
-
-    logger.info("Evaluation completed | %s", metrics)
-    return metrics
-
-
-# -------------------------------------------------
-# Rolling backtest evaluation
-# -------------------------------------------------
-def backtest_evaluation(
-    y_true: pd.Series,
-    y_preds: List[pd.Series],
-    config: EvaluationConfig
-) -> pd.DataFrame:
+def evaluate_model(
+    model,
+    y_train,
+    y_test,
+    steps,
+    exog_train=None,
+    exog_test=None,
+    model_name=None
+):
     """
-    Evaluate multiple rolling forecasts
+    Generic evaluator for ALL models
     """
 
-    results = []
+    # Fit model
+    if exog_train is not None:
+        model.fit(y_train, exog_train)
+        y_pred = model.predict(steps=steps, exog_future=exog_test)
+    else:
+        model.fit(y_train)
+        y_pred = model.predict(steps=steps)
 
-    for i, y_pred in enumerate(y_preds):
-        metrics = evaluate_forecast(y_true, y_pred, config)
-        metrics["fold"] = i
-        res
+    y_pred = np.array(y_pred)
+    y_true = np.array(y_test[:steps])
+
+    results = {
+        "Model": model_name or model.__class__.__name__,
+        "RMSE": rmse(y_true, y_pred),
+        "MAE": mae(y_true, y_pred),
+        "MAPE": mape(y_true, y_pred)
+    }
+
+    # Optional: store model params if available
+    if hasattr(model, "best_params"):
+        results["Params"] = model.best_params
+    else:
+        results["Params"] = None
+
+    return results
